@@ -2,29 +2,14 @@ import streamlit as st
 import pandas as pd
 import time
 
-# Must be the first Streamlit command
-st.set_page_config(layout="wide", page_title="Super Bowl LX") 
-
-# Hide the Streamlit structure
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            div[data-testid="stToolbar"] {visibility: hidden;}
-            div[data-testid="stDecoration"] {visibility: hidden;}
-            div[data-testid="stStatusWidget"] {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
-
 # ==========================================
 # ⚙️ CONFIGURATION
 # ==========================================
+# REPLACE THESE WITH YOUR ACTUAL CSV LINKS
 RESPONSES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM-EfkmrH7kIB4hNaudn9Ks3ajIh4vTURC55xDWi9EYa6LAaCFzJsNvfSIz7fFTV_Ufb3fezm_yGN8/pub?gid=949196677&single=true&output=csv"
 KEY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM-EfkmrH7kIB4hNaudn9Ks3ajIh4vTURC55xDWi9EYa6LAaCFzJsNvfSIz7fFTV_Ufb3fezm_yGN8/pub?gid=1997150247&single=true&output=csv"
 
-REFRESH_RATE = 30
+REFRESH_RATE = 30  # Seconds between auto-updates
 
 st.set_page_config(
     page_title="SB LX Leaderboard",
@@ -38,21 +23,23 @@ st.set_page_config(
 # ==========================================
 st.markdown("""
     <style>
+    /* IMPORT FONTS */
     @import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Roboto+Condensed:wght@400;700&display=swap');
 
+    /* 1. BACKGROUND: "Levi's Stadium Night" Theme */
     .stApp {
         background: radial-gradient(circle at 50% 10%, #1e3c72, #021124 80%);
         color: #ffffff;
     }
     .block-container { padding-top: 1rem; max-width: 95% !important; }
 
-    /* Header Styling */
+    /* 2. HEADER: TV Broadcast Style */
     .header-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         margin-bottom: 20px;
-        border-bottom: 2px solid #aa0000;
+        border-bottom: 2px solid #aa0000; /* Red Accent */
         padding-bottom: 20px;
     }
     .super-bowl-title {
@@ -83,7 +70,7 @@ st.markdown("""
         margin-top: 10px;
     }
 
-    /* Podium Layout */
+    /* 3. PODIUM CONTAINER */
     .podium-container {
         display: flex;
         justify-content: center;
@@ -94,7 +81,7 @@ st.markdown("""
         height: 400px;
     }
 
-    /* Pillars */
+    /* 4. PILLARS: 3D Metallic Look */
     .pillar {
         display: flex;
         flex-direction: column;
@@ -189,9 +176,55 @@ st.markdown("""
         letter-spacing: 2px;
     }
 
-    /* Table */
-    .stDataFrame { margin-top: 20px; border-top: 2px solid #333; }
+    /* TICKER STYLING */
+    .ticker-wrap {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #aa0000;
+        overflow: hidden;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        border-top: 2px solid #fff;
+        z-index: 9999;
+    }
+    .ticker-move {
+        display: inline-block;
+        white-space: nowrap;
+        animation: ticker-move 20s linear infinite;
+        font-family: 'Roboto Condensed', sans-serif;
+        font-size: 1.2rem;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .ticker-item { display: inline-block; padding: 0 50px; }
+    
+    /* REFRESH TIMER STYLING */
+    .refresh-timer {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 20px;
+        padding: 5px 15px;
+        color: #ccc;
+        font-family: 'Roboto Condensed', sans-serif;
+        font-size: 0.9rem;
+        backdrop-filter: blur(5px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
 
+    @keyframes ticker-move {
+        0% { transform: translate3d(100%, 0, 0); }
+        100% { transform: translate3d(-100%, 0, 0); }
+    }
     @keyframes pulse-red {
         0% { box-shadow: 0 0 0 0 rgba(204, 0, 0, 0.7); }
         70% { box-shadow: 0 0 0 10px rgba(204, 0, 0, 0); }
@@ -220,16 +253,10 @@ def calculate_scores(responses, key):
 
     for _, row in responses.iterrows():
         try:
-            # FIX: Grab 2nd column (Index 1) for Name
-            raw_val = row.iloc[1]
+            raw_val = row.iloc[1] # Grab 2nd column
             name = str(raw_val).strip()
-            
-            # Clean up emails (e.g. irvin@gmail.com -> irvin)
-            if "@" in name:
-                name = name.split("@")[0]
-            
-            if name.lower() in ["nan", ""]:
-                name = "Anonymous"
+            if "@" in name: name = name.split("@")[0] # Clean emails
+            if name.lower() in ["nan", ""]: name = "Anonymous"
         except:
             name = "Unknown"
 
@@ -238,17 +265,25 @@ def calculate_scores(responses, key):
             if q in row:
                 user_ans = str(row[q]).strip().lower()
                 correct_ans_str = str(correct_ans).strip().lower()
-                
                 if correct_ans_str not in ["nan", "pending", ""]:
                      if user_ans == correct_ans_str:
                         points += 1
-        
         scores.append({"Name": name, "Score": points})
     
     return pd.DataFrame(scores).sort_values("Score", ascending=False)
 
+def play_audio(filename):
+    # This generates hidden HTML that auto-plays the sound file
+    # Note: Requires user interaction with page first to work
+    audio_code = f"""
+        <audio autoplay>
+        <source src="app/static/{filename}" type="audio/mp3">
+        </audio>
+    """
+    st.markdown(audio_code, unsafe_allow_html=True)
+
 # ==========================================
-# 📺 MAIN APP DISPLAY
+# 📺 APP EXECUTION
 # ==========================================
 
 # 1. HEADER
@@ -262,48 +297,74 @@ st.markdown("""
 
 placeholder = st.empty()
 
+# 2. MAIN CONTENT LOOP
 with placeholder.container():
     responses, key = load_data()
     
     if responses.empty:
         st.info("Waiting for data... Check your CSV links.")
+        leader_name = "---"
+        leader_score = 0
     else:
         df = calculate_scores(responses, key).reset_index(drop=True)
         
+        # --- STATE MANAGEMENT & ALERTS ---
+        n1 = df.iloc[0]['Name'] if len(df) > 0 else "---"
+        s1 = int(df.iloc[0]['Score']) if len(df) > 0 else 0
+        
+        # Init State
+        if 'last_leader' not in st.session_state: st.session_state.last_leader = n1
+        if 'last_top_score' not in st.session_state: st.session_state.last_top_score = s1
+
+        # Check for NEW LEADER
+        if st.session_state.last_leader != n1:
+            st.balloons()
+            st.toast(f"🚨 NEW LEADER: {n1}!", icon="👑")
+            # play_audio("cheer.mp3") # Uncomment if you have the file
+            st.session_state.last_leader = n1
+            
+        # Check for SCORE UPDATE
+        elif s1 > st.session_state.last_top_score:
+            st.toast(f"📈 POINTS UPDATED! Leader at {s1}", icon="🏈")
+            # play_audio("chime.mp3") # Uncomment if you have the file
+            st.session_state.last_top_score = s1
+            
+        leader_name = n1
+        leader_score = s1
+
+        # --- PODIUM RENDER ---
         def get_player(idx):
-            if len(df) > idx:
-                return df.iloc[idx]['Name'], int(df.iloc[idx]['Score'])
+            if len(df) > idx: return df.iloc[idx]['Name'], int(df.iloc[idx]['Score'])
             return "---", 0
 
-        n1, s1 = get_player(0)
-        n2, s2 = get_player(1)
-        n3, s3 = get_player(2)
+        p1n, p1s = get_player(0)
+        p2n, p2s = get_player(1)
+        p3n, p3s = get_player(2)
 
-        # 2. PODIUM (NO INDENTATION IN HTML STRING TO FIX BUG)
         st.markdown(f"""
 <div class="podium-container">
 <div class="pillar place-2">
 <div class="rank-circle">2</div>
-<div class="name-text">{n2}</div>
-<div class="score-text">{s2}</div>
+<div class="name-text">{p2n}</div>
+<div class="score-text">{p2s}</div>
 <div class="pts-label">Points</div>
 </div>
 <div class="pillar place-1">
 <div class="rank-circle">1</div>
-<div class="name-text">{n1}</div>
-<div class="score-text">{s1}</div>
+<div class="name-text">{p1n}</div>
+<div class="score-text">{p1s}</div>
 <div class="pts-label">Current Leader</div>
 </div>
 <div class="pillar place-3">
 <div class="rank-circle">3</div>
-<div class="name-text">{n3}</div>
-<div class="score-text">{s3}</div>
+<div class="name-text">{p3n}</div>
+<div class="score-text">{p3s}</div>
 <div class="pts-label">Points</div>
 </div>
 </div>
 """, unsafe_allow_html=True)
 
-        # 3. TABLE
+        # --- TABLE RENDER ---
         if len(df) > 3:
             st.markdown("### 🔽 The Chase Pack")
             st.dataframe(
@@ -321,49 +382,8 @@ with placeholder.container():
                 }
             )
 
-time.sleep(REFRESH_RATE)
-st.rerun()
-
-# ==========================================
-# 📢 ENGAGEMENT FEATURES (PASTE AT BOTTOM)
-# ==========================================
-
-# 1. THE "ESPN" TICKER (CSS)
-st.markdown("""
-    <style>
-    .ticker-wrap {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        background-color: #aa0000; /* Red Background */
-        overflow: hidden;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        border-top: 2px solid #fff;
-        z-index: 9999;
-    }
-    .ticker-move {
-        display: inline-block;
-        white-space: nowrap;
-        animation: ticker-move 20s linear infinite;
-        font-family: 'Roboto Condensed', sans-serif;
-        font-size: 1.2rem;
-        color: white;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-    .ticker-item {
-        display: inline-block;
-        padding: 0 50px;
-    }
-    @keyframes ticker-move {
-        0% { transform: translate3d(100%, 0, 0); }
-        100% { transform: translate3d(-100%, 0, 0); }
-    }
-    </style>
-    
+# 3. TICKER (ALWAYS VISIBLE)
+st.markdown(f"""
     <div class="ticker-wrap">
         <div class="ticker-move">
             <span class="ticker-item">🏈 LIVE LEADERBOARD</span>
@@ -372,47 +392,16 @@ st.markdown("""
             <span class="ticker-item">📱 SCAN QR TO BET</span>
         </div>
     </div>
-""".format(leader_name=n1, leader_score=s1), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
+# 4. REFRESH TIMER LOOP (Replaces simple sleep)
+timer_placeholder = st.empty()
+for i in range(REFRESH_RATE, 0, -1):
+    timer_placeholder.markdown(f"""
+        <div class="refresh-timer">
+            <span>↻</span> Updating in {i}s
+        </div>
+    """, unsafe_allow_html=True)
+    time.sleep(1)
 
-# 2. STATE LOGIC & AUDIO TRIGGERS
-# We put this check at the end so it compares the *new* calculation to the *old* state
-
-# A. Initialize State if missing
-if 'last_leader' not in st.session_state:
-    st.session_state.last_leader = n1
-if 'last_top_score' not in st.session_state:
-    st.session_state.last_top_score = s1
-
-# B. Helper to play sound (Hidden HTML Audio)
-def play_audio(filename):
-    # This generates hidden HTML that auto-plays the sound file
-    # NOTE: You must click the screen once after loading for browser to allow autoplay
-    audio_code = f"""
-        <audio autoplay>
-        <source src="app/static/{filename}" type="audio/mp3">
-        <source src="{filename}" type="audio/mp3">
-        </audio>
-    """
-    st.markdown(audio_code, unsafe_allow_html=True)
-
-# C. Trigger: New Leader?
-if st.session_state.last_leader != n1:
-    # Someone new took the throne!
-    st.balloons()
-    st.toast(f"🚨 NEW LEADER: {n1}!", icon="👑")
-    try:
-        play_audio("cheer.mp3") 
-    except:
-        pass
-    st.session_state.last_leader = n1
-
-# D. Trigger: Score Change (but same leader)?
-elif s1 > st.session_state.last_top_score:
-    # Points were added, but leader didn't change
-    st.toast(f"📈 POINTS UPDATED! Leader at {s1}", icon="🏈")
-    try:
-        play_audio("chime.mp3")
-    except:
-        pass
-    st.session_state.last_top_score = s1
+st.rerun()
