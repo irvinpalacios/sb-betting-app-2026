@@ -64,6 +64,7 @@ st.markdown("""
         font-family: 'Teko', sans-serif;
         font-size: 6rem;
         font-weight: 700;
+        font-style: italic;
         text-transform: uppercase;
         letter-spacing: 4px;
         background: linear-gradient(180deg, #ffffff 30%, #b3b3b3 100%);
@@ -436,13 +437,13 @@ def get_party_stats(df, responses, key_df):
     # 1. Wooden Spoon (Last Place)
     last_place_name = "---"
     if len(df) >= 4:
-        last_place_name = df.iloc[-1]['Name']
+        last_place_name = df.iloc[-1]['Name'].upper()
     
     # 2. Rivalry (Find 4th & 5th place)
     rivalry_text = "---"
     if len(df) >= 5:
-        p4 = df.iloc[3]['Name']
-        p5 = df.iloc[4]['Name']
+        p4 = df.iloc[3]['Name'].upper()
+        p5 = df.iloc[4]['Name'].upper()
         rivalry_text = f"{p4} vs {p5}"
     
     # 3. Party Pulse (Smart Upcoming or Winner Pick)
