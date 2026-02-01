@@ -343,8 +343,8 @@ def get_party_stats(df, responses, key_df):
     if unanswered:
         # Show a random upcoming question
         q_text = random.choice(unanswered)
-        pulse_text = f"Next: {q_text}"
-        pulse_label = "🔮 NEXT PROP BET"
+        pulse_text = f"{q_text}"
+        pulse_label = "🔮 UPCOMING BET"
     else:
         # Fallback: Show Winner Stats
         pulse_label = "📊 CROWD PREDICTION"
