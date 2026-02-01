@@ -670,7 +670,7 @@ st.markdown(f"""
             <span class="ticker-item">🏆 LEADER: {leader_name} ({leader_score} PTS)</span>
             <span class="ticker-item">👥 {player_count} PLAYERS ACTIVE</span>
             <span class="ticker-item">🥄 NEEDS HELP: {spoon}</span>
-            <span class="ticker-item">� HOT BATTLE: {rivalry}</span>
+            <span class="ticker-item">🔥 HOT BATTLE: {rivalry}</span>
             <span class="ticker-item">🍻 HYDRATE & CELEBRATE</span>
         </div>
     </div>
