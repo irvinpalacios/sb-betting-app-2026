@@ -344,8 +344,8 @@ def get_party_stats(df, responses, key_df):
         # Show a random upcoming question
         q_text = random.choice(unanswered)
         
-        # Label: Question Text (Truncated)
-        pulse_label = (q_text[:18] + '..') if len(q_text) > 20 else q_text
+        # Label: Question Text (Full with Emoji)
+        pulse_label = f"🎲 {q_text}"
         
         # Stats: Calculate % for top answer
         pulse_text = "Waiting for bets..."
