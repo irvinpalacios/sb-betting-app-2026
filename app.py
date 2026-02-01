@@ -264,30 +264,47 @@ st.markdown("""
         gap: 5px;
     }
 
+    /* UPPER STAGE LAYOUT (Podium + Chase Pack Sidebar) */
+    .upper-stage {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 30px;
+        align-items: flex-start;
+    }
+    
+    .podium-section {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .chase-pack-sidebar {
+        width: 400px;
+        flex-shrink: 0;
+    }
+    
     /* CHASE PACK STYLING */
     .chase-pack-header {
         font-family: 'Teko', sans-serif;
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 2px;
         color: #aaa;
-        margin: 30px 0 20px 0;
+        margin-bottom: 20px;
         text-align: center;
     }
     
     .chase-pack-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
-        margin-bottom: 60px;
+        gap: 10px;
     }
     
     .chase-player-card {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px 20px;
+        border-radius: 8px;
+        padding: 12px 15px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -307,15 +324,15 @@ st.markdown("""
     .chase-player-left {
         display: flex;
         align-items: center;
-        gap: 15px;
+        gap: 10px;
     }
     
     .chase-rank {
         font-family: 'Teko', sans-serif;
-        font-size: 2rem;
+        font-size: 1.5rem;
         font-weight: 600;
         color: #666;
-        min-width: 30px;
+        min-width: 25px;
     }
     
     .chase-player-card.wooden-spoon .chase-rank {
@@ -324,7 +341,7 @@ st.markdown("""
     
     .chase-name {
         font-family: 'Teko', sans-serif;
-        font-size: 1.8rem;
+        font-size: 1.4rem;
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 1px;
@@ -337,7 +354,7 @@ st.markdown("""
     
     .chase-score {
         font-family: 'Teko', sans-serif;
-        font-size: 2.5rem;
+        font-size: 2rem;
         font-weight: 700;
         color: #fff;
     }
@@ -514,8 +531,28 @@ with placeholder.container():
         p1n, p1s = get_player(0)
         p2n, p2s = get_player(1)
         p3n, p3s = get_player(2)
+        
+        # --- BUILD CHASE PACK HTML ---
+        chase_pack_html = ''
+        if len(df) > 3:
+            chase_pack = df.iloc[3:].reset_index(drop=True)
+            last_place_idx = len(chase_pack) - 1
+            
+            chase_pack_html = '<div class="chase-pack-sidebar"><div class="chase-pack-header">The Chase Pack</div><div class="chase-pack-grid">'
+            
+            for idx, row in chase_pack.iterrows():
+                rank = idx + 4
+                name = row['Name']
+                score = int(row['Score'])
+                wooden_spoon_class = ' wooden-spoon' if idx == last_place_idx else ''
+                chase_pack_html += f'<div class="chase-player-card{wooden_spoon_class}"><div class="chase-player-left"><div class="chase-rank">{rank}</div><div class="chase-name">{name}</div></div><div class="chase-score">{score}</div></div>'
+            
+            chase_pack_html += '</div></div>'
 
+        # --- UPPER STAGE: PODIUM + CHASE PACK SIDEBAR ---
         st.markdown(f"""
+<div class="upper-stage">
+<div class="podium-section">
 <div class="podium-container">
 <div class="pillar place-2">
 <div class="rank-circle">2</div>
@@ -536,9 +573,12 @@ with placeholder.container():
 <div class="pts-label">Points</div>
 </div>
 </div>
+</div>
+{chase_pack_html}
+</div>
 """, unsafe_allow_html=True)
 
-        # --- NEW: PARTY STATS ROW ---
+        # --- PARTY STATS ROW ---
         spoon, rivalry, pulse, label = get_party_stats(df, responses, key)
         
         c1, c2, c3 = st.columns(3)
@@ -563,31 +603,6 @@ with placeholder.container():
                 <div class="stats-value" style="font-size: 1.5rem; color: #ff4444;">{spoon}</div>
             </div>
             """, unsafe_allow_html=True)
-
-        # --- CHASE PACK RENDER ---
-        if len(df) > 3:
-            st.markdown('<div class="chase-pack-header">The Chase Pack</div>', unsafe_allow_html=True)
-            
-            # Get chase pack players (4th place and below)
-            chase_pack = df.iloc[3:].reset_index(drop=True)
-            last_place_idx = len(chase_pack) - 1
-            
-            # Build the grid HTML
-            grid_html = '<div class="chase-pack-grid">'
-            
-            for idx, row in chase_pack.iterrows():
-                rank = idx + 4  # Start from 4th place
-                name = row['Name']
-                score = int(row['Score'])
-                
-                # Check if this is the wooden spoon (last place)
-                wooden_spoon_class = ' wooden-spoon' if idx == last_place_idx else ''
-                
-                # Build card HTML (using single line to avoid escaping issues)
-                grid_html += f'<div class="chase-player-card{wooden_spoon_class}"><div class="chase-player-left"><div class="chase-rank">{rank}</div><div class="chase-name">{name}</div></div><div class="chase-score">{score}</div></div>'
-            
-            grid_html += '</div>'
-            st.markdown(grid_html, unsafe_allow_html=True)
 
 # 3. TICKER (ALWAYS VISIBLE)
 st.markdown(f"""
