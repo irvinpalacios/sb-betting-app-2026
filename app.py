@@ -236,7 +236,7 @@ st.markdown("""
     .ticker-move {
         display: inline-block;
         white-space: nowrap;
-        animation: ticker-move 20s linear infinite;
+        animation: ticker-move 30s linear infinite;
         font-family: 'Roboto Condensed', sans-serif;
         font-size: 1.2rem;
         color: white;
