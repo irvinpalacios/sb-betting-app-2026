@@ -583,15 +583,8 @@ with placeholder.container():
                 # Check if this is the wooden spoon (last place)
                 wooden_spoon_class = ' wooden-spoon' if idx == last_place_idx else ''
                 
-                grid_html += f'''
-                <div class="chase-player-card{wooden_spoon_class}">
-                    <div class="chase-player-left">
-                        <div class="chase-rank">{rank}</div>
-                        <div class="chase-name">{name}</div>
-                    </div>
-                    <div class="chase-score">{score}</div>
-                </div>
-                '''
+                # Build card HTML (using single line to avoid escaping issues)
+                grid_html += f'<div class="chase-player-card{wooden_spoon_class}"><div class="chase-player-left"><div class="chase-rank">{rank}</div><div class="chase-name">{name}</div></div><div class="chase-score">{score}</div></div>'
             
             grid_html += '</div>'
             st.markdown(grid_html, unsafe_allow_html=True)
