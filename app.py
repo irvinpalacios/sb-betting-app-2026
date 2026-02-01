@@ -5,7 +5,7 @@ import altair as alt
 import random
 
 # Must be the first Streamlit command
-st.set_page_config(layout="wide", page_title="Super Bowl LX") 
+st.set_page_config(layout="wide", page_title="Super Bowl LX ") 
 
 # Hide the Streamlit structure
 hide_st_style = """
@@ -211,8 +211,8 @@ st.markdown("""
     /* Text */
     .name-text {
         font-family: 'Teko', sans-serif;
-        font-size: 2.2rem;
-        font-weight: 500;
+        font-size: 2.8rem;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-top: 25px;
@@ -225,17 +225,18 @@ st.markdown("""
     }
     .score-text {
         font-family: 'Teko', sans-serif;
-        font-size: 6rem;
+        font-size: 7rem;
         font-weight: 700;
-        margin: -10px 0 0 0;
+        margin: -5px 0 0 0;
         line-height: 1;
     }
     .pts-label {
         font-family: 'Roboto Condensed', sans-serif;
-        font-size: 1rem;
+        font-size: 0.85rem;
         text-transform: uppercase;
-        opacity: 0.7;
-        letter-spacing: 2px;
+        opacity: 0.65;
+        letter-spacing: 3px;
+        margin-top: 5px;
     }
 
     /* TICKER STYLING */
