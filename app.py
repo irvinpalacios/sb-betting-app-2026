@@ -269,7 +269,7 @@ def calculate_scores(responses, key):
 
     for _, row in responses.iterrows():
         try:
-            raw_val = row.iloc[1] # Grab 2nd column
+            raw_val = row.iloc[2] # Grab 2nd column
             name = str(raw_val).strip()
             if "@" in name: name = name.split("@")[0] # Clean emails
             if name.lower() in ["nan", ""]: name = "Anonymous"
