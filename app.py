@@ -2,6 +2,22 @@ import streamlit as st
 import pandas as pd
 import time
 
+# Must be the first Streamlit command
+st.set_page_config(layout="wide", page_title="Super Bowl LX") 
+
+# Hide the Streamlit structure
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            div[data-testid="stToolbar"] {visibility: hidden;}
+            div[data-testid="stDecoration"] {visibility: hidden;}
+            div[data-testid="stStatusWidget"] {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 # ==========================================
 # ⚙️ CONFIGURATION
 # ==========================================
