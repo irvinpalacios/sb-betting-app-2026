@@ -7,8 +7,8 @@ import altair as alt
 # ⚙️ CONFIGURATION
 # ==========================================
 # REPLACE THESE WITH YOUR "PUBLISHED TO WEB" CSV LINKS
-RESPONSES_URL = "YOUR_RESPONSES_SHEET_CSV_URL_HERE"
-KEY_URL = "YOUR_KEY_SHEET_CSV_URL_HERE"
+RESPONSES_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM-EfkmrH7kIB4hNaudn9Ks3ajIh4vTURC55xDWi9EYa6LAaCFzJsNvfSIz7fFTV_Ufb3fezm_yGN8/pub?gid=949196677&single=true&output=csv"
+KEY_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRM-EfkmrH7kIB4hNaudn9Ks3ajIh4vTURC55xDWi9EYa6LAaCFzJsNvfSIz7fFTV_Ufb3fezm_yGN8/pub?gid=1997150247&single=true&output=csv"
 
 REFRESH_RATE = 30  # Seconds between auto-updates
 
