@@ -330,6 +330,7 @@ def get_party_stats(df, responses, key_df):
     
     # 3. Party Pulse (Smart Upcoming or Winner Pick)
     pulse_text = "Seahawks: 50% / Pats: 50%"
+    pulse_label = "📊 CROWD PREDICTION"
     
     # Check for Unanswered Questions
     unanswered = []
@@ -343,8 +344,10 @@ def get_party_stats(df, responses, key_df):
         # Show a random upcoming question
         q_text = random.choice(unanswered)
         pulse_text = f"Next: {q_text}"
+        pulse_label = "🔮 NEXT PROP BET"
     else:
         # Fallback: Show Winner Stats
+        pulse_label = "📊 CROWD PREDICTION"
         try:
             col_match = [c for c in responses.columns if "winner" in c.lower() or "team" in c.lower()]
             if col_match:
@@ -357,7 +360,7 @@ def get_party_stats(df, responses, key_df):
         except:
             pass
         
-    return last_place_name, rivalry_text, pulse_text
+    return last_place_name, rivalry_text, pulse_text, pulse_label
 
 # ==========================================
 # 📺 APP EXECUTION
@@ -440,7 +443,7 @@ with placeholder.container():
 """, unsafe_allow_html=True)
 
         # --- NEW: PARTY STATS ROW ---
-        spoon, rivalry, pulse = get_party_stats(df, responses, key)
+        spoon, rivalry, pulse, label = get_party_stats(df, responses, key)
         
         c1, c2, c3 = st.columns(3)
         with c1:
@@ -453,7 +456,7 @@ with placeholder.container():
         with c2:
             st.markdown(f"""
             <div class="stats-card">
-                <div class="stats-title">📊 Party Pulse (Winner)</div>
+                <div class="stats-title">{label}</div>
                 <div class="stats-value" style="font-size: 1.5rem; color: #00d2ff;">{pulse}</div>
             </div>
             """, unsafe_allow_html=True)
