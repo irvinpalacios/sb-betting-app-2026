@@ -343,8 +343,21 @@ def get_party_stats(df, responses, key_df):
     if unanswered:
         # Show a random upcoming question
         q_text = random.choice(unanswered)
-        pulse_text = f"{q_text}"
-        pulse_label = "🔮 UPCOMING BET"
+        
+        # Label: Question Text (Truncated)
+        pulse_label = (q_text[:18] + '..') if len(q_text) > 20 else q_text
+        
+        # Stats: Calculate % for top answer
+        pulse_text = "Waiting for bets..."
+        try:
+            if q_text in responses.columns:
+                counts = responses[q_text].value_counts(normalize=True).mul(100).round(0)
+                if not counts.empty:
+                    top_pick = counts.index[0]
+                    top_pct = int(counts.iloc[0])
+                    pulse_text = f"{top_pct}% voted for {top_pick}"
+        except:
+            pass
     else:
         # Fallback: Show Winner Stats
         pulse_label = "📊 CROWD PREDICTION"
