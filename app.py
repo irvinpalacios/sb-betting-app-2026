@@ -73,6 +73,13 @@ st.markdown("""
         margin: 0;
         text-shadow: 0px 4px 10px rgba(0,0,0,0.5);
     }
+    .badge-container {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        justify-content: center;
+        align-items: center;
+    }
     .live-badge {
         background-color: #cc0000;
         color: white;
@@ -85,7 +92,18 @@ st.markdown("""
         letter-spacing: 2px;
         box-shadow: 0 0 15px rgba(204, 0, 0, 0.6);
         animation: pulse-red 2s infinite;
-        margin-top: 10px;
+    }
+    .points-remaining-badge {
+        background-color: #1e5a9e;
+        color: white;
+        padding: 5px 15px;
+        font-family: 'Roboto Condensed', sans-serif;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 1.2rem;
+        border-radius: 4px;
+        letter-spacing: 2px;
+        box-shadow: 0 0 15px rgba(30, 90, 158, 0.6);
     }
 
     /* 3. PODIUM CONTAINER */
@@ -475,24 +493,47 @@ def get_party_stats(df, responses, key_df):
         
     return last_place_name, rivalry_text, pulse_text, pulse_label
 
+def calculate_points_remaining(key_df):
+    """Calculate how many questions are still unanswered (null values in key)"""
+    if key_df.empty:
+        return 0
+    try:
+        # Count null/pending values in the answer column (second column)
+        answer_col = key_df.iloc[:, 1]
+        null_count = answer_col.isna().sum()
+        # Also count 'pending' or empty strings as unanswered
+        pending_count = answer_col.astype(str).str.lower().isin(['pending', '', 'nan']).sum()
+        return max(null_count, pending_count)
+    except:
+        return 0
+
 # ==========================================
 # 📺 APP EXECUTION
 # ==========================================
 
-# 1. HEADER
-st.markdown("""
-<div class="header-container">
-<div class="super-bowl-title">Super Bowl LX</div>
-<div class="super-bowl-title" style="font-size: 2.5rem; color: #ccc;">Betting Challenge</div>
-<div class="live-badge">Live • Levi's Stadium</div>
-</div>
-""", unsafe_allow_html=True)
+# 1. HEADER (Static part - will be updated with dynamic badges)
+header_placeholder = st.empty()
 
 placeholder = st.empty()
 
 # 2. MAIN CONTENT LOOP
 with placeholder.container():
     responses, key = load_data()
+    
+    # Calculate points remaining
+    points_remaining = calculate_points_remaining(key)
+    
+    # Update header with dynamic points remaining
+    header_placeholder.markdown(f"""
+<div class="header-container">
+<div class="super-bowl-title">Super Bowl LX</div>
+<div class="super-bowl-title" style="font-size: 2.5rem; color: #ccc;">Betting Challenge</div>
+<div class="badge-container">
+<div class="live-badge">Live • Levi's Stadium</div>
+<div class="points-remaining-badge">⚡ Points Left in Game: {points_remaining}</div>
+</div>
+</div>
+""", unsafe_allow_html=True)
     
     if responses.empty:
         st.info("Waiting for data... Check your CSV links.")
