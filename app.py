@@ -1,22 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
-
-# Must be the first Streamlit command
-st.set_page_config(layout="wide", page_title="Super Bowl LX") 
-
-# Hide the Streamlit structure
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            div[data-testid="stToolbar"] {visibility: hidden;}
-            div[data-testid="stDecoration"] {visibility: hidden;}
-            div[data-testid="stStatusWidget"] {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+import altair as alt
 
 # ==========================================
 # ⚙️ CONFIGURATION
@@ -49,13 +34,13 @@ st.markdown("""
     }
     .block-container { padding-top: 1rem; max-width: 95% !important; }
 
-    /* 2. HEADER: TV Broadcast Style */
+    /* 2. HEADER */
     .header-container {
         display: flex;
         flex-direction: column;
         align-items: center;
         margin-bottom: 20px;
-        border-bottom: 2px solid #aa0000; /* Red Accent */
+        border-bottom: 2px solid #aa0000;
         padding-bottom: 20px;
     }
     .super-bowl-title {
@@ -93,11 +78,11 @@ st.markdown("""
         align-items: flex-end;
         gap: 20px;
         margin-top: 20px;
-        margin-bottom: 50px;
+        margin-bottom: 30px;
         height: 400px;
     }
 
-    /* 4. PILLARS: 3D Metallic Look */
+    /* 4. PILLARS & CARDS */
     .pillar {
         display: flex;
         flex-direction: column;
@@ -112,6 +97,31 @@ st.markdown("""
         box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
     
+    /* Stats Cards (New Feature) */
+    .stats-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        height: 100%;
+    }
+    .stats-title {
+        font-family: 'Roboto Condensed', sans-serif;
+        color: #aaa;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 10px;
+    }
+    .stats-value {
+        font-family: 'Teko', sans-serif;
+        font-size: 2rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    /* Rank Medals */
     .rank-circle {
         width: 50px;
         height: 50px;
@@ -288,15 +298,36 @@ def calculate_scores(responses, key):
     
     return pd.DataFrame(scores).sort_values("Score", ascending=False)
 
-def play_audio(filename):
-    # This generates hidden HTML that auto-plays the sound file
-    # Note: Requires user interaction with page first to work
-    audio_code = f"""
-        <audio autoplay>
-        <source src="app/static/{filename}" type="audio/mp3">
-        </audio>
-    """
-    st.markdown(audio_code, unsafe_allow_html=True)
+def get_party_stats(df, responses):
+    # 1. Wooden Spoon (Last Place)
+    last_place_name = "---"
+    if not df.empty:
+        last_place_name = df.iloc[-1]['Name']
+    
+    # 2. Rivalry (Find 4th & 5th place)
+    rivalry_text = "---"
+    if len(df) >= 5:
+        p4 = df.iloc[3]['Name']
+        p5 = df.iloc[4]['Name']
+        rivalry_text = f"{p4} vs {p5}"
+    
+    # 3. Party Pulse (Winning Team Pick)
+    # We try to find a column with 'winner' or 'team' to analyze
+    pulse_text = "Seahawks: 50% / Pats: 50%"
+    try:
+        # Find column that might be the "Winner" question
+        col_match = [c for c in responses.columns if "winner" in c.lower() or "team" in c.lower()]
+        if col_match:
+            target_col = col_match[0]
+            counts = responses[target_col].value_counts(normalize=True).mul(100).round(0)
+            if not counts.empty:
+                top_pick = counts.index[0]
+                top_pct = int(counts.iloc[0])
+                pulse_text = f"{top_pick} ({top_pct}%)"
+    except:
+        pass
+        
+    return last_place_name, rivalry_text, pulse_text
 
 # ==========================================
 # 📺 APP EXECUTION
@@ -336,13 +367,11 @@ with placeholder.container():
         if st.session_state.last_leader != n1:
             st.balloons()
             st.toast(f"🚨 NEW LEADER: {n1}!", icon="👑")
-            # play_audio("cheer.mp3") # Uncomment if you have the file
             st.session_state.last_leader = n1
             
         # Check for SCORE UPDATE
         elif s1 > st.session_state.last_top_score:
             st.toast(f"📈 POINTS UPDATED! Leader at {s1}", icon="🏈")
-            # play_audio("chime.mp3") # Uncomment if you have the file
             st.session_state.last_top_score = s1
             
         leader_name = n1
@@ -379,6 +408,32 @@ with placeholder.container():
 </div>
 </div>
 """, unsafe_allow_html=True)
+
+        # --- NEW: PARTY STATS ROW ---
+        spoon, rivalry, pulse = get_party_stats(df, responses)
+        
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.markdown(f"""
+            <div class="stats-card">
+                <div class="stats-title">🔥 Rivalry Watch</div>
+                <div class="stats-value" style="font-size: 1.5rem; color: #ffcc00;">{rivalry}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"""
+            <div class="stats-card">
+                <div class="stats-title">📊 Party Pulse (Winner)</div>
+                <div class="stats-value" style="font-size: 1.5rem; color: #00d2ff;">{pulse}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with c3:
+            st.markdown(f"""
+            <div class="stats-card">
+                <div class="stats-title">🥄 The Wooden Spoon</div>
+                <div class="stats-value" style="font-size: 1.5rem; color: #ff4444;">{spoon}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         # --- TABLE RENDER ---
         if len(df) > 3:
