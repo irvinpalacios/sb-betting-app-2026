@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import time
 import altair as alt
+import random
 
 # Must be the first Streamlit command
 st.set_page_config(layout="wide", page_title="Super Bowl LX") 
@@ -314,7 +315,7 @@ def calculate_scores(responses, key):
     
     return pd.DataFrame(scores).sort_values("Score", ascending=False)
 
-def get_party_stats(df, responses):
+def get_party_stats(df, responses, key_df):
     # 1. Wooden Spoon (Last Place)
     last_place_name = "---"
     if not df.empty:
@@ -327,21 +328,34 @@ def get_party_stats(df, responses):
         p5 = df.iloc[4]['Name']
         rivalry_text = f"{p4} vs {p5}"
     
-    # 3. Party Pulse (Winning Team Pick)
-    # We try to find a column with 'winner' or 'team' to analyze
+    # 3. Party Pulse (Smart Upcoming or Winner Pick)
     pulse_text = "Seahawks: 50% / Pats: 50%"
-    try:
-        # Find column that might be the "Winner" question
-        col_match = [c for c in responses.columns if "winner" in c.lower() or "team" in c.lower()]
-        if col_match:
-            target_col = col_match[0]
-            counts = responses[target_col].value_counts(normalize=True).mul(100).round(0)
-            if not counts.empty:
-                top_pick = counts.index[0]
-                top_pct = int(counts.iloc[0])
-                pulse_text = f"{top_pick} ({top_pct}%)"
-    except:
-        pass
+    
+    # Check for Unanswered Questions
+    unanswered = []
+    if not key_df.empty:
+        for _, row in key_df.iterrows():
+            ans = str(row.iloc[1]).strip().lower()
+            if ans in ["nan", "pending", ""]:
+                unanswered.append(row.iloc[0])
+                
+    if unanswered:
+        # Show a random upcoming question
+        q_text = random.choice(unanswered)
+        pulse_text = f"Next: {q_text}"
+    else:
+        # Fallback: Show Winner Stats
+        try:
+            col_match = [c for c in responses.columns if "winner" in c.lower() or "team" in c.lower()]
+            if col_match:
+                target_col = col_match[0]
+                counts = responses[target_col].value_counts(normalize=True).mul(100).round(0)
+                if not counts.empty:
+                    top_pick = counts.index[0]
+                    top_pct = int(counts.iloc[0])
+                    pulse_text = f"{top_pick} ({top_pct}%)"
+        except:
+            pass
         
     return last_place_name, rivalry_text, pulse_text
 
@@ -426,7 +440,7 @@ with placeholder.container():
 """, unsafe_allow_html=True)
 
         # --- NEW: PARTY STATS ROW ---
-        spoon, rivalry, pulse = get_party_stats(df, responses)
+        spoon, rivalry, pulse = get_party_stats(df, responses, key)
         
         c1, c2, c3 = st.columns(3)
         with c1:
