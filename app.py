@@ -264,6 +264,88 @@ st.markdown("""
         gap: 5px;
     }
 
+    /* CHASE PACK STYLING */
+    .chase-pack-header {
+        font-family: 'Teko', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: #aaa;
+        margin: 30px 0 20px 0;
+        text-align: center;
+    }
+    
+    .chase-pack-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+        margin-bottom: 60px;
+    }
+    
+    .chase-player-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    
+    .chase-player-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+    
+    .chase-player-card.wooden-spoon {
+        border: 2px solid #cc0000;
+        background: rgba(204, 0, 0, 0.1);
+    }
+    
+    .chase-player-left {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .chase-rank {
+        font-family: 'Teko', sans-serif;
+        font-size: 2rem;
+        font-weight: 600;
+        color: #666;
+        min-width: 30px;
+    }
+    
+    .chase-player-card.wooden-spoon .chase-rank {
+        color: #cc0000;
+    }
+    
+    .chase-name {
+        font-family: 'Teko', sans-serif;
+        font-size: 1.8rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #fff;
+    }
+    
+    .chase-player-card.wooden-spoon .chase-name {
+        color: #cc0000;
+    }
+    
+    .chase-score {
+        font-family: 'Teko', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #fff;
+    }
+    
+    .chase-player-card.wooden-spoon .chase-score {
+        color: #cc0000;
+    }
+
     @keyframes ticker-move {
         0% { transform: translate3d(100%, 0, 0); }
         100% { transform: translate3d(-100%, 0, 0); }
@@ -482,23 +564,37 @@ with placeholder.container():
             </div>
             """, unsafe_allow_html=True)
 
-        # --- TABLE RENDER ---
+        # --- CHASE PACK RENDER ---
         if len(df) > 3:
-            st.markdown("### 🔽 The Chase Pack")
-            st.dataframe(
-                df.iloc[3:],
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Name": st.column_config.TextColumn("Player", width="large"),
-                    "Score": st.column_config.ProgressColumn(
-                        "Points",
-                        format="%d",
-                        min_value=0,
-                        max_value=25,
-                    )
-                }
-            )
+            st.markdown('<div class="chase-pack-header">The Chase Pack</div>', unsafe_allow_html=True)
+            
+            # Get chase pack players (4th place and below)
+            chase_pack = df.iloc[3:].reset_index(drop=True)
+            last_place_idx = len(chase_pack) - 1
+            
+            # Build the grid HTML
+            grid_html = '<div class="chase-pack-grid">'
+            
+            for idx, row in chase_pack.iterrows():
+                rank = idx + 4  # Start from 4th place
+                name = row['Name']
+                score = int(row['Score'])
+                
+                # Check if this is the wooden spoon (last place)
+                wooden_spoon_class = ' wooden-spoon' if idx == last_place_idx else ''
+                
+                grid_html += f'''
+                <div class="chase-player-card{wooden_spoon_class}">
+                    <div class="chase-player-left">
+                        <div class="chase-rank">{rank}</div>
+                        <div class="chase-name">{name}</div>
+                    </div>
+                    <div class="chase-score">{score}</div>
+                </div>
+                '''
+            
+            grid_html += '</div>'
+            st.markdown(grid_html, unsafe_allow_html=True)
 
 # 3. TICKER (ALWAYS VISIBLE)
 st.markdown(f"""
