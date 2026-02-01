@@ -149,15 +149,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🧠 LOGIC & GRADING
+# 🧠 LOGIC & GRADING (FIXED)
 # ==========================================
 def load_data():
     try:
         df_resp = pd.read_csv(RESPONSES_URL)
         df_key = pd.read_csv(KEY_URL)
-        # Rename Column 2 to 'Name' safely
-        if not df_resp.empty:
-            df_resp = df_resp.rename(columns={df_resp.columns[1]: 'Name'})
+        # We DO NOT rename columns here anymore to avoid duplication bugs
         return df_resp, df_key
     except Exception:
         return pd.DataFrame(), pd.DataFrame()
@@ -170,9 +168,14 @@ def calculate_scores(responses, key):
     scores = []
 
     for _, row in responses.iterrows():
-        # --- FIX: FORCE STRING CONVERSION ---
-        # This prevents the "dtype: object" error in the UI
-        name_raw = row['Name']
+        # --- FIX APPLIED HERE ---
+        # Instead of looking for "Name" (which might fail or duplicate),
+        # we grab the 2nd column (index 1) which is ALWAYS the name field.
+        try:
+            name_raw = row.iloc[1] 
+        except IndexError:
+            name_raw = "Anonymous"
+
         name = str(name_raw).strip() if pd.notna(name_raw) else "Anonymous"
         
         points = 0
@@ -207,7 +210,6 @@ with placeholder.container():
         df = calculate_scores(responses, key).reset_index(drop=True)
         
         # --- FIX: SAFE DATA EXTRACTION FOR PODIUM ---
-        # We define a helper to get safe strings/ints, handling empty lists
         def get_player(idx):
             if len(df) > idx:
                 return df.iloc[idx]['Name'], int(df.iloc[idx]['Score'])
