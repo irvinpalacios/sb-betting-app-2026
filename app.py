@@ -323,3 +323,96 @@ with placeholder.container():
 
 time.sleep(REFRESH_RATE)
 st.rerun()
+
+# ==========================================
+# 📢 ENGAGEMENT FEATURES (PASTE AT BOTTOM)
+# ==========================================
+
+# 1. THE "ESPN" TICKER (CSS)
+st.markdown("""
+    <style>
+    .ticker-wrap {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background-color: #aa0000; /* Red Background */
+        overflow: hidden;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        border-top: 2px solid #fff;
+        z-index: 9999;
+    }
+    .ticker-move {
+        display: inline-block;
+        white-space: nowrap;
+        animation: ticker-move 20s linear infinite;
+        font-family: 'Roboto Condensed', sans-serif;
+        font-size: 1.2rem;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .ticker-item {
+        display: inline-block;
+        padding: 0 50px;
+    }
+    @keyframes ticker-move {
+        0% { transform: translate3d(100%, 0, 0); }
+        100% { transform: translate3d(-100%, 0, 0); }
+    }
+    </style>
+    
+    <div class="ticker-wrap">
+        <div class="ticker-move">
+            <span class="ticker-item">🏈 LIVE LEADERBOARD</span>
+            <span class="ticker-item">🏆 CURRENT LEADER: {leader_name} ({leader_score} PTS)</span>
+            <span class="ticker-item">🍕 DON'T FORGET TO EAT</span>
+            <span class="ticker-item">📱 SCAN QR TO BET</span>
+        </div>
+    </div>
+""".format(leader_name=n1, leader_score=s1), unsafe_allow_html=True)
+
+
+# 2. STATE LOGIC & AUDIO TRIGGERS
+# We put this check at the end so it compares the *new* calculation to the *old* state
+
+# A. Initialize State if missing
+if 'last_leader' not in st.session_state:
+    st.session_state.last_leader = n1
+if 'last_top_score' not in st.session_state:
+    st.session_state.last_top_score = s1
+
+# B. Helper to play sound (Hidden HTML Audio)
+def play_audio(filename):
+    # This generates hidden HTML that auto-plays the sound file
+    # NOTE: You must click the screen once after loading for browser to allow autoplay
+    audio_code = f"""
+        <audio autoplay>
+        <source src="app/static/{filename}" type="audio/mp3">
+        <source src="{filename}" type="audio/mp3">
+        </audio>
+    """
+    st.markdown(audio_code, unsafe_allow_html=True)
+
+# C. Trigger: New Leader?
+if st.session_state.last_leader != n1:
+    # Someone new took the throne!
+    st.balloons()
+    st.toast(f"🚨 NEW LEADER: {n1}!", icon="👑")
+    try:
+        play_audio("cheer.mp3") 
+    except:
+        pass
+    st.session_state.last_leader = n1
+
+# D. Trigger: Score Change (but same leader)?
+elif s1 > st.session_state.last_top_score:
+    # Points were added, but leader didn't change
+    st.toast(f"📈 POINTS UPDATED! Leader at {s1}", icon="🏈")
+    try:
+        play_audio("chime.mp3")
+    except:
+        pass
+    st.session_state.last_top_score = s1
