@@ -605,13 +605,31 @@ with placeholder.container():
             """, unsafe_allow_html=True)
 
 # 3. TICKER (ALWAYS VISIBLE)
+# Safety logic: Ensure all ticker variables have default values
+if 'leader_name' not in locals():
+    leader_name = "---"
+if 'leader_score' not in locals():
+    leader_score = 0
+if 'spoon' not in locals():
+    spoon = "---"
+if 'rivalry' not in locals():
+    rivalry = "---"
+
+# Calculate player count
+try:
+    player_count = len(df) if 'df' in locals() and not df.empty else 0
+except:
+    player_count = 0
+
 st.markdown(f"""
     <div class="ticker-wrap">
         <div class="ticker-move">
-            <span class="ticker-item">🏈 LIVE LEADERBOARD</span>
-            <span class="ticker-item">🏆 CURRENT LEADER: {leader_name} ({leader_score} PTS)</span>
-            <span class="ticker-item">🍕 DON'T FORGET TO EAT</span>
-            <span class="ticker-item">📱 SCAN QR TO BET</span>
+            <span class="ticker-item">🏈 SUPER BOWL LX LIVE LEADERBOARD</span>
+            <span class="ticker-item">🏆 LEADER: {leader_name} ({leader_score} PTS)</span>
+            <span class="ticker-item">👥 {player_count} PLAYERS ACTIVE</span>
+            <span class="ticker-item">🥄 NEEDS HELP: {spoon}</span>
+            <span class="ticker-item">� HOT BATTLE: {rivalry}</span>
+            <span class="ticker-item">🍻 HYDRATE & CELEBRATE</span>
         </div>
     </div>
 """, unsafe_allow_html=True)
