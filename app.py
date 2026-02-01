@@ -318,7 +318,7 @@ def calculate_scores(responses, key):
 def get_party_stats(df, responses, key_df):
     # 1. Wooden Spoon (Last Place)
     last_place_name = "---"
-    if not df.empty:
+    if len(df) >= 4:
         last_place_name = df.iloc[-1]['Name']
     
     # 2. Rivalry (Find 4th & 5th place)
@@ -344,8 +344,9 @@ def get_party_stats(df, responses, key_df):
         # Show a random upcoming question
         q_text = random.choice(unanswered)
         
-        # Label: Question Text (Full with Emoji)
-        pulse_label = f"🎲 {q_text}"
+        # Label: Clean Question Text (Right of colon)
+        clean_q = q_text.split(":", 1)[-1].strip()
+        pulse_label = f"🎲 {clean_q}"
         
         # Stats: Calculate % for top answer
         pulse_text = "Waiting for bets..."
