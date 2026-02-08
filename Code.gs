@@ -7,8 +7,10 @@
 /*                                CONFIGURATION                               */
 /* -------------------------------------------------------------------------- */
 
-const SHEET_NAME_RESPONSES = "Responses";
-const SHEET_NAME_KEY = "AnswerKey";
+const SHEET_NAME_RESPONSES = "Form Responses 1";
+const SHEET_NAME_KEY = "Key";
+const RESPONSE_NAME_COL_INDEX = 2; // Column C (0-indexed = 2)
+const RESPONSE_Q_START_INDEX = 3;  // Column D (0-indexed = 3)
 
 /* -------------------------------------------------------------------------- */
 /*                                 HTML SERVICE                               */
@@ -36,79 +38,90 @@ function getDataPacket() {
   const keySheet = ss.getSheetByName(SHEET_NAME_KEY);
 
   if (!respSheet || !keySheet) {
-    throw new Error("Missing specific sheets. Please run setupDemoData() first.");
+    throw new Error(`Missing tabs: '${SHEET_NAME_RESPONSES}' or '${SHEET_NAME_KEY}'. Check tab names.`);
   }
 
-  // 1. Fetch Data
-  // Assuming Row 1 is Headers. 
-  // Responses: Col A=Timestamp, Col B=Name, Col C...=Answers
-  // Key: Row 2 = Answers (aligns with Col C...)
+  // 1. Parse The Key (Vertical: Col A=Question, Col B=Answer)
+  const keyRaw = keySheet.getDataRange().getValues(); // [[Q, A], [Q, A]...]
   
-  const respData = respSheet.getDataRange().getValues();
-  // Remove header
-  const respHeaders = respData.shift(); 
-  
-  const keyData = keySheet.getDataRange().getValues();
-  // Key Row might be row 2 (index 1) if row 1 is headers. Let's assume Row 2 is the actual key.
-  // If only 1 row exists, assume it's row 2. Safer to explicitly grab row 2.
-  // Let's assume Row 1: Headers (Questions), Row 2: Answers.
-  const keyHeaders = keyData[0];
-  const keyRow = keyData.length > 1 ? keyData[1] : [];
-
-  // Column mapping
-  // Responsive data usually starts at index 2 (Col C) for answers
-  // So key answer for question at respHeaders[i] should be at keyHeaders corresponding index.
-  // Let's assume strict column alignment for simplicity: Col C in Responses = Col C in Key.
-  
-  const START_COL_INDEX = 2; // 0=Timestamp, 1=Name, 2=Q1...
-
-  // 2. Score Calculation
-  let leaderboard = [];
+  let keyMap = []; // Array of objects { q: string, a: string, respColIndex: number }
   let pointsRemaining = 0;
 
-  // Calculate Points Remaining (Count empty cells in Key starting from START_COL_INDEX)
-  // We only count up to the length of the headers to avoid infinite trailing emptiness
-  const totalQuestions = Math.min(respHeaders.length, keyHeaders.length);
-  
-  for (let c = START_COL_INDEX; c < totalQuestions; c++) {
-    let keyAns = (keyRow[c] || "").toString().trim();
-    if (keyAns === "") {
-      pointsRemaining++;
+  // Start from row 0, but if row 0 is "Question/Answer" header, skip it.
+  let startRow = 0;
+  if (keyRaw.length > 0 && String(keyRaw[0][0]).toLowerCase().includes("question")) {
+    startRow = 1;
+  }
+
+  // We map sequentially: 
+  // Key Row X (after header) -> Response Column (RESPONSE_Q_START_INDEX + X)
+  let validKeyCount = 0;
+
+  for (let i = startRow; i < keyRaw.length; i++) {
+    const q = String(keyRaw[i][0]).trim();
+    const a = String(keyRaw[i][1]).trim(); // key answer
+    
+    // Valid key item if it has a question text in Col A
+    if (q) {
+      keyMap.push({ 
+        q: q, 
+        a: a,
+        respColIndex: RESPONSE_Q_START_INDEX + validKeyCount 
+      });
+      
+      if (a === "") {
+        pointsRemaining++;
+      }
+      validKeyCount++;
     }
   }
 
-  // Calculate User Scores
-  respData.forEach(row => {
-    let name = row[1]; // Col B
-    if (!name) return; // Skip empty rows
+  // 2. Score Users
+  const respData = respSheet.getDataRange().getValues();
+  if (respData.length <= 1) return { leaderboard: [], stats: {}, meta: {} };
+  
+  // Slice off headers (Row 1)
+  const usersRaw = respData.slice(1);
+
+  let leaderboard = [];
+
+  usersRaw.forEach(row => {
+    // Name is at Index 2 (Col C)
+    let name = row[RESPONSE_NAME_COL_INDEX]; 
+    
+    if (!name || String(name).trim() === "") return;
 
     let score = 0;
     
-    for (let c = START_COL_INDEX; c < totalQuestions; c++) {
-      let userAns = (row[c] || "").toString().trim().toLowerCase();
-      let keyAns = (keyRow[c] || "").toString().trim().toLowerCase();
+    // Loop through our Key Map and compare
+    keyMap.forEach(kItem => {
+      const targetCol = kItem.respColIndex;
+      const correctAns = kItem.a.toLowerCase();
       
-      if (keyAns !== "" && userAns === keyAns) {
-        score++;
+      // Only score if key has an answer and column exists in user row
+      if (correctAns !== "" && targetCol < row.length) {
+        const userAns = String(row[targetCol]).toString().trim().toLowerCase();
+        if (userAns === correctAns) {
+          score++;
+        }
       }
-    }
+    });
 
     leaderboard.push({
-      name: name,
+      name: String(name).trim(),
       score: score
     });
   });
 
-  // Sort Descending by Score
+  // Sort Descending
   leaderboard.sort((a, b) => b.score - a.score);
 
-  // Assign Ranks (handle ties visually on frontend, but here just simple index)
+  // Assign Ranks
   leaderboard = leaderboard.map((p, i) => ({...p, rank: i + 1}));
 
-  // 3. Calculate Stats
-
-  // A. Rivalry (Rank 4 vs Rank 5)
-  // Indices 3 and 4
+  // 3. Stats Logic (Unchanged from before, just re-integrated)
+  
+  // A. Rivalry
   let rivalry = null;
   if (leaderboard.length >= 5) {
     rivalry = {
@@ -120,7 +133,7 @@ function getDataPacket() {
     };
   }
 
-  // B. Wooden Spoon (Last Place)
+  // B. Wooden Spoon
   let woodenSpoon = null;
   if (leaderboard.length > 0) {
     const lastPlayer = leaderboard[leaderboard.length - 1];
@@ -130,50 +143,44 @@ function getDataPacket() {
     };
   }
 
-  // C. Pulse (Next Unanswered Question Analysis)
+  // C. Pulse
   let pulse = { label: "Completed", value: "FINAL", details: "All Set" };
   
-  // Find first index where key is empty
-  let nextQIndex = -1;
-  for (let c = START_COL_INDEX; c < totalQuestions; c++) {
-    let keyAns = (keyRow[c] || "").toString().trim();
-    if (keyAns === "") {
-      nextQIndex = c;
-      break;
-    }
-  }
-
-  if (nextQIndex !== -1) {
-    let questionName = keyHeaders[nextQIndex];
-    if (questionName.length > 25) questionName = questionName.substring(0, 22) + "...";
-
-    // Analyze votes
+  // Find first key item with empty answer
+  const firstUnanswered = keyMap.find(k => k.a === "");
+  
+  if (firstUnanswered) {
+    const qText = firstUnanswered.q;
+    const colIdx = firstUnanswered.respColIndex;
+    
+    // Tally votes for this column
     let voteCounts = {};
     let totalVotes = 0;
-    
-    respData.forEach(row => {
-      let ans = (row[nextQIndex] || "").toString().trim();
-      if (ans) {
-        voteCounts[ans] = (voteCounts[ans] || 0) + 1;
-        totalVotes++;
+
+    usersRaw.forEach(row => {
+      if (colIdx < row.length) {
+        const ans = String(row[colIdx]).trim();
+        if (ans) {
+          voteCounts[ans] = (voteCounts[ans] || 0) + 1;
+          totalVotes++;
+        }
       }
     });
 
     // Find top choice
     let topChoice = "Waiting...";
     let topCount = 0;
-    
     for (const [ans, count] of Object.entries(voteCounts)) {
       if (count > topCount) {
         topCount = count;
         topChoice = ans;
       }
     }
-
+    
     let percent = totalVotes > 0 ? Math.round((topCount / totalVotes) * 100) : 0;
     
     pulse = {
-      question: questionName,
+      question: qText.length > 25 ? qText.substring(0, 22) + "..." : qText,
       topChoice: topChoice,
       percent: percent,
       totalVotes: totalVotes
@@ -200,52 +207,58 @@ function getDataPacket() {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Run this once to populate the sheet with testing data.
+ * Creates the Sheet Structure requested by User for testing purposes.
+ * WARNING: This clears existing data in these tabs.
  */
 function setupDemoData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // 1. Setup AnswerKey
+  // 1. Setup 'Key' (Vertical)
   let keySheet = ss.getSheetByName(SHEET_NAME_KEY);
   if (!keySheet) {
     keySheet = ss.insertSheet(SHEET_NAME_KEY);
+  } else {
+    keySheet.clear();
   }
-  keySheet.clear();
-  // Headers
-  const questions = ["Timestamp", "DummyName", "Coin Toss", "First TD Scorer", "Gatorade Color", "MVP", "Over/Under 48.5", "Halftime Short 1", "Halftime Short 2", "Winner"];
-  const answers = ["", "", "Heads", "McCaffrey", "", "", "Over", "", "", ""]; // Some empty for 'Points Remaining' logic
   
-  keySheet.getRange(1, 1, 1, questions.length).setValues([questions]).setFontWeight("bold").setBackground("#f3f3f3");
-  keySheet.getRange(2, 1, 1, answers.length).setValues([answers]);
+  const keyData = [
+    ["Question", "Answer"],
+    ["Coin Toss", "Heads"],
+    ["First TD Scorer", "McCaffrey"],
+    ["Gatorade Color", ""], // Pending
+    ["MVP", ""],
+    ["Over/Under 48.5", "Over"],
+    ["Winner", ""]
+  ];
+  keySheet.getRange(1, 1, keyData.length, 2).setValues(keyData);
+  keySheet.getRange("A1:B1").setFontWeight("bold").setBackground("#f3f3f3");
 
-  // 2. Setup Responses
+  // 2. Setup 'Form Responses 1'
   let respSheet = ss.getSheetByName(SHEET_NAME_RESPONSES);
   if (!respSheet) {
     respSheet = ss.insertSheet(SHEET_NAME_RESPONSES);
+  } else {
+    respSheet.clear();
   }
-  respSheet.clear();
-  respSheet.getRange(1, 1, 1, questions.length).setValues([questions]).setFontWeight("bold").setBackground("#e6efff");
 
-  // Dummy Respondants
-  const players = [
-    {n: "Tony Stark", a: ["Heads", "McCaffrey", "Orange", "Purdy", "Over", "Yes", "No", "49ers"]},
-    {n: "Steve Rogers", a: ["Tails", "Kelce", "Red", "Mahomes", "Under", "Yes", "Yes", "Chiefs"]},
-    {n: "Bruce Banner", a: ["Heads", "Deebo", "Clear", "Purdy", "Over", "No", "No", "49ers"]},
-    {n: "Natasha Romanoff", a: ["Heads", "Pacheco", "Orange", "Kelce", "Over", "Yes", "No", "Chiefs"]},
-    {n: "Clint Barton", a: ["Tails", "McCaffrey", "Blue", "Mahomes", "Over", "No", "Yes", "Chiefs"]}, // Rivalry
-    {n: "Wanda Maximoff", a: ["Heads", "Kelce", "Purple", "Kelce", "Under", "Yes", "Yes", "Chiefs"]}, // Rivalry
-    {n: "Peter Parker", a: ["Heads", "McCaffrey", "Orange", "Kittle", "Over", "Yes", "No", "49ers"]}, 
-    {n: "Scott Lang", a: ["Tails", "Rice", "Green", "Mahomes", "Under", "No", "No", "Chiefs"]}, // Wooden Spoon candidate
+  // Headers: Timestamp(A), Email(B), Name(C), Q1(D)...
+  const headers = ["Timestamp", "Email Address", "Name", "Coin Toss", "First TD Scorer", "Gatorade Color", "MVP", "Over/Under 48.5", "Winner"];
+  respSheet.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+
+  // Dummy Data
+  const participants = [
+    ["Tony", "Heads", "McCaffrey", "Orange", "Purdy", "Over", "49ers"],
+    ["Steve", "Tails", "Kelce", "Red", "Mahomes", "Under", "Chiefs"],
+    ["Natasha", "Heads", "Pacheco", "Orange", "Kelce", "Over", "Chiefs"],
+    ["Bruce", "Heads", "Deebo", "Clear", "Purdy", "Over", "49ers"],
+    ["Clint", "Tails", "McCaffrey", "Blue", "Mahomes", "Over", "Chiefs"],
+    ["Wanda", "Heads", "Kelce", "Purple", "Kelce", "Under", "Chiefs"],
+    ["Thor", "Tails", "McCaffrey", "Orange", "Purdy", "Over", "49ers"],
+    ["Loki", "Tails", "Rice", "Green", "Mahomes", "Under", "Chiefs"] 
   ];
 
-  const rows = players.map(p => {
-    return [new Date(), p.n, ...p.a];
-  });
+  const rows = participants.map(p => [new Date(), "test@example.com", ...p]);
+  respSheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
 
-  if (rows.length > 0) {
-    respSheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
-  }
-  
-  Logger.log("Demo Data Created Successfully");
-  return "Done";
+  return "Setup Complete. Tabs 'Form Responses 1' and 'Key' created.";
 }
