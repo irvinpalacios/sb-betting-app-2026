@@ -41,6 +41,13 @@ function getDataPacket() {
     throw new Error(`Missing tabs: '${SHEET_NAME_RESPONSES}' or '${SHEET_NAME_KEY}'. Check tab names.`);
   }
 
+  // 0. LOAD DATA EARLY to allow header-based mapping
+  const respData = respSheet.getDataRange().getValues();
+  let headers = [];
+  if (respData.length > 0) {
+    headers = respData[0].map(h => String(h).trim().toLowerCase());
+  }
+
   // 1. Parse The Key (Vertical: Col A=Question, Col B=Answer)
   const keyRaw = keySheet.getDataRange().getValues(); // [[Q, A], [Q, A]...]
   
@@ -53,8 +60,7 @@ function getDataPacket() {
     startRow = 1;
   }
 
-  // We map sequentially: 
-  // Key Row X (after header) -> Response Column (RESPONSE_Q_START_INDEX + X)
+  // We map sequentially OR by header name match (Priority to name match)
   let validKeyCount = 0;
 
   for (let i = startRow; i < keyRaw.length; i++) {
@@ -63,10 +69,16 @@ function getDataPacket() {
     
     // Valid key item if it has a question text in Col A
     if (q) {
+      // Try to find by header name first
+      const headerIndex = headers.indexOf(q.toLowerCase());
+      
+      // If found, use that index. Else fallback to positional logic
+      const targetCol = (headerIndex > -1) ? headerIndex : (RESPONSE_Q_START_INDEX + validKeyCount);
+
       keyMap.push({ 
         q: q, 
         a: a,
-        respColIndex: RESPONSE_Q_START_INDEX + validKeyCount 
+        respColIndex: targetCol 
       });
       
       if (a === "") {
@@ -77,7 +89,6 @@ function getDataPacket() {
   }
 
   // 2. Score Users
-  const respData = respSheet.getDataRange().getValues();
   if (respData.length <= 1) return { leaderboard: [], stats: {}, meta: {} };
   
   // Slice off headers (Row 1)
@@ -146,12 +157,14 @@ function getDataPacket() {
   // C. Pulse
   let pulse = { label: "Completed", value: "FINAL", details: "All Set" };
   
-  // Find first key item with empty answer
-  const firstUnanswered = keyMap.find(k => k.a === "");
+  // Find ALL key items with empty answer
+  const allUnanswered = keyMap.filter(k => k.a === "");
   
-  if (firstUnanswered) {
-    const qText = firstUnanswered.q;
-    const colIdx = firstUnanswered.respColIndex;
+  if (allUnanswered.length > 0) {
+    const selected = allUnanswered[Math.floor(Math.random() * allUnanswered.length)];
+    
+    const qText = selected.q;
+    const colIdx = selected.respColIndex;
     
     // Tally votes for this column
     let voteCounts = {};
@@ -180,7 +193,7 @@ function getDataPacket() {
     let percent = totalVotes > 0 ? Math.round((topCount / totalVotes) * 100) : 0;
     
     pulse = {
-      question: qText.length > 25 ? qText.substring(0, 22) + "..." : qText,
+      question: qText,
       topChoice: topChoice,
       percent: percent,
       totalVotes: totalVotes
